@@ -2,8 +2,11 @@ package com.example.myapplication;
 
 import androidx.annotation.ColorInt;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -13,7 +16,9 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Vibrator;
 import android.util.Log;
 import android.view.View;
@@ -33,15 +38,16 @@ import java.util.Locale;
 
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener, LocationListener {
-    TextView x,y,z,record;
+    TextView x,y,z,record,t1,t2;
     Button start,stop;
     SQLiteDatabase SQLITEDATABASE ;     //this is database
     String SQLiteQuery;
     String Xacc;
     String Yacc;
     String Zacc;
-    Boolean flag = false;
+    Boolean flag = false,butt=false;
     Vibrator v;
+    LocationManager locationManager;
 
 
     @Override
@@ -52,16 +58,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Sensor accelerometer = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         sm.registerListener((SensorEventListener)this, accelerometer,SensorManager.SENSOR_STATUS_ACCURACY_HIGH);
 
+        if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(),
+                android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED)
+        {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION}, 101);
+        }
+
         setContentView(R.layout.activity_main);
         x = findViewById(R.id.x);
         y = findViewById(R.id.y);
         z = findViewById(R.id.z);
+        t1=findViewById(R.id.t1);
+        t2=findViewById(R.id.t2);
         record = findViewById(R.id.record);
         start = findViewById(R.id.start);
         stop = findViewById(R.id.stop);
 
 
-        DBCreate();
 
         x.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -77,6 +93,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onClick(View v) {
                 flag = true;
+                butt = true;
                 record.setText("Recording");
                 record.setTextColor(Color.GREEN);
                 stop.setBackgroundColor(Color.RED);
@@ -89,7 +106,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                flag = false;
+                //flag = false;
+                butt = false;
                 record.setText("Not Recording");
                 record.setTextColor(Color.RED);
 
@@ -104,35 +122,35 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    private void SubmitData2SQLiteDB() {
-       Xacc = x.getText().toString();
-       Yacc= y.getText().toString();
-       Zacc = z.getText().toString();
+    void getLocation() {
+        try {
+            locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 5, this);
+        }
+        catch(SecurityException e) {
+            e.printStackTrace();
+        }
 
-        SQLiteQuery = "INSERT INTO accelereometerData3(x,y,z) VALUES('"+Xacc+"', '"+Yacc+"', '"+Zacc+"');";
-        SQLITEDATABASE.execSQL(SQLiteQuery);
-        Toast.makeText(MainActivity.this,"Data Submit Successfully", Toast.LENGTH_LONG).show();
-
-
-    }
-
-    private void DBCreate() {
-        SQLITEDATABASE = openOrCreateDatabase("SKDataBase", Context.MODE_PRIVATE, null);  //this will create DATABASE
-        SQLITEDATABASE.execSQL(
-                "CREATE TABLE IF NOT EXISTS accelereometerData3(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, x VARCHAR, y VARCHAR, z VARCHAR);"
-        );
-        Log.d("Creation","dbcreate is working"+DebugDB.getAddressLog()+"");
 
 
     }
+
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         x.setText("X: " + event.values[0] + "");
         y.setText("Y: " + event.values[1] + "");
         z.setText("Z: " + event.values[2] + "");
-        if(flag) {
-            SubmitData2SQLiteDB();
+        if(flag && (Math.abs(event.values[0])>17 || Math.abs(event.values[1])>17 || Math.abs(event.values[2])>17 ) && (butt==flag)) {
+            getLocation();
+            flag=false;
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    flag=true;
+                }
+            },5000);
         }
     }
 
@@ -141,9 +159,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
+
+
+
+
     @Override
     public void onLocationChanged(Location location)
     {
+        Toast.makeText(getApplicationContext(),"Hello from getLocation()",Toast.LENGTH_SHORT).show();
         t1.setText("YOUR LOCATION : "+"\n Latitude: " + location.getLatitude() + "\n Longitude: " + location.getLongitude());
         try {
 

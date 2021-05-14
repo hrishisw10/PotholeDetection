@@ -19,8 +19,17 @@
         android:layout_height="wrap_content"
         android:textAlignment="center"
         android:layout_centerInParent="true"
+        android:text="Coordinates to be here"
+        android:id="@+id/t1"
+        />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAlignment="center"
+        android:layout_centerInParent="true"
         android:text="1"
         android:id="@+id/x"
+        android:layout_below="@+id/t1"
         />
 
     <TextView
@@ -40,6 +49,15 @@
         android:text="3"
         android:id="@+id/z"
         android:layout_below="@+id/y"
+        />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAlignment="center"
+        android:layout_centerInParent="true"
+        android:text="Address to be here"
+        android:id="@+id/t2"
+        android:layout_below="@+id/z"
         />
     <LinearLayout
         android:layout_width="match_parent"
